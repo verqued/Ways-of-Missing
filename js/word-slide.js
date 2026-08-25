@@ -161,7 +161,7 @@
       image.style.aspectRatio = unit.bounds.width + " / " + unit.bounds.height;
       artboard.appendChild(image);
       groups[unit.groupIndex].push(image);
-    });
+    }, this);
 
     this.section.appendChild(artboard);
     this.artboard = artboard;
