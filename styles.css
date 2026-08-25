@@ -1,0 +1,761 @@
+:root {
+  --paper: #fff;
+  --ink: #000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+button,
+video {
+  font: inherit;
+}
+
+.camera-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: stretch;
+  padding: clamp(18px, 2.5vw, 48px);
+  background: #fff;
+  transition: opacity 0.75s ease, visibility 0.75s ease;
+}
+
+.camera-gate[hidden],
+.camera-hud[hidden] {
+  display: none;
+}
+
+.camera-gate.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.camera-gate__inner {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: repeat(4, auto);
+  align-content: center;
+  gap: clamp(4px, 0.8vh, 12px);
+  text-align: left;
+  font-family: Monaco, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.camera-gate__inner p {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  color: #000;
+  font-size: clamp(43.2px, 6.9vw, 134.4px);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+
+.camera-gate__inner p + p {
+  margin-top: 0;
+}
+
+.camera-gate button {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  font-family: Monaco, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(42px, 7vw, 136px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  cursor: pointer;
+}
+
+.camera-gate button span {
+  display: inline-block;
+  padding: 0.02em 0.06em;
+  background: #000;
+}
+
+.camera-gate button:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+
+.camera-gate.is-camera-allowed {
+  background: #000;
+}
+
+.camera-gate.is-camera-allowed .camera-gate__inner p {
+  color: #fff;
+}
+
+.camera-gate.is-camera-allowed button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.camera-gate.is-camera-allowed button span {
+  background: #fff;
+  color: #000;
+}
+
+/* Illustrator-authored guideline screens. Keep the semantic copy and button
+   in the DOM while the exported artwork provides the visible presentation. */
+.camera-gate {
+  padding: 0;
+}
+
+.camera-gate__artwork {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.camera-gate__artwork--before,
+.camera-gate.is-camera-loading .camera-gate__artwork--loading,
+.camera-gate.is-camera-allowed .camera-gate__artwork--allowed {
+  display: block;
+}
+
+.camera-gate.is-camera-loading .camera-gate__artwork--before,
+.camera-gate.is-camera-allowed .camera-gate__artwork--before {
+  display: none;
+}
+
+.camera-gate__inner {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.camera-gate__inner p,
+.camera-gate button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.camera-gate button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+}
+
+.camera-hud {
+  position: fixed;
+  font-family: "Gungsuh", "궁서", "GungSeo", serif;
+  top: 50%;
+  left: 18px;
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  transform: translateY(-50%);
+}
+
+.camera-monitor {
+  width: 216px;
+  height: 144px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+
+.camera-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.eye-open-meter {
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  gap: 3px;
+  color: #111;
+  font-variant-numeric: tabular-nums;
+}
+
+.eye-open-meter__label,
+.eye-open-meter__level,
+.eye-open-meter__action {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.eye-open-meter__action {
+  margin-top: 2px;
+}
+
+.eye-open-meter__value {
+  font-size: 24px;
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+main {
+  position: relative;
+}
+
+.opening-blank {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  background: var(--paper);
+}
+
+.opening-cover {
+  height: auto;
+  min-height: 160svh;
+  overflow: hidden;
+}
+
+/* First-load cover exception only. The loop buffer and every later cycle use
+   the unshifted shared cover layout. */
+#slide-cover {
+  --cover-pink-center-offset: max(6.13vw, 10.897svh);
+  padding-top: max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px));
+}
+
+.cover-intro-complete #slide-cover {
+  padding-top: 0;
+}
+
+.opening-blank__page {
+  width: 100%;
+  height: 100svh;
+  background: var(--paper);
+}
+
+.slide {
+  position: relative;
+  width: 100%;
+  /* Match the rendered 16:9 artboard height at every viewport ratio.
+     On wide screens 160vw resolves to a 90vw-tall artboard; keeping the
+     section at only 160svh clipped bottom-edge copy such as slide 2. */
+  min-height: max(160svh, 90vw);
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.presentation-ui-hidden .camera-hud,
+.presentation-ui-hidden .camera-gate {
+  display: none !important;
+}
+
+.slide + .slide {
+  margin-top: 3svh;
+}
+
+#slide-6 {
+  margin-top: 1svh;
+}
+
+#slide-12 {
+  margin-top: -9svh;
+}
+
+/* Slides 17–18 intentionally place photographs beyond the Illustrator artboard. */
+#slide-17 {
+  padding-bottom: max(10vw, 18svh);
+}
+
+#slide-18 {
+  overflow: visible;
+}
+
+.slide__image,
+.slide__vector-artboard {
+  position: relative;
+  left: 50%;
+  display: block;
+  width: max(160vw, 284.444svh);
+  max-width: none;
+  aspect-ratio: 16 / 9;
+  transform: translateX(-50%);
+}
+
+.slide__image {
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.slide__vector-artboard {
+  overflow: hidden;
+  background: var(--paper);
+}
+
+#slide-17 .slide__vector-artboard,
+#slide-18 .slide__vector-artboard {
+  overflow: visible;
+}
+
+.word-vector-unit {
+  position: absolute;
+  display: block;
+  height: auto;
+  max-width: none;
+  opacity: var(--scroll-opacity, 0);
+  clip-path: inset(
+    var(--clip-top, 0%)
+    var(--clip-right, 0%)
+    var(--clip-bottom, 0%)
+    var(--clip-left, 0%)
+  );
+  filter: blur(var(--scroll-blur, 0));
+  transform:
+    translate3d(var(--scroll-x, 0), var(--scroll-y, 0), 0)
+    rotate(var(--scroll-rotate, 0deg))
+    scale(
+      var(--scroll-scale-x, var(--scroll-scale, 1)),
+      var(--scroll-scale-y, var(--scroll-scale, 1))
+    );
+  transform-origin: center;
+  will-change: transform, opacity, clip-path, filter;
+  pointer-events: none;
+  user-select: none;
+  transition:
+    opacity 260ms cubic-bezier(0.215, 0.61, 0.355, 1),
+    transform 280ms cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+/* Illustrator raster/placed artwork is photographic content. Grayscale is
+   visually idempotent for photographs that are already monochrome. */
+.word-vector-unit:is([data-source-type="RasterItem"], [data-source-type="PlacedItem"]) {
+  filter: grayscale(1) blur(var(--scroll-blur, 0)) !important;
+}
+
+.word-vector-unit.is-omitted,
+.word-vector-unit.is-omitted-character {
+  visibility: hidden !important;
+}
+
+.word-vector-unit--none {
+  transition: none;
+}
+
+.omission-animation-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+  isolation: isolate;
+  z-index: 10000;
+}
+
+.word-fall-clone {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  max-width: none;
+  margin: 0;
+  opacity: 1;
+  visibility: visible;
+  filter: none;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+  transform-origin: 50% 50%;
+}
+
+.omission-floor {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: rgb(0 0 0 / 22%);
+  pointer-events: none;
+}
+
+.word-dark-reveal-panel {
+  position: absolute;
+  z-index: 0;
+  background: #050505;
+  opacity: var(--dark-reveal-panel-opacity, 0);
+  pointer-events: none;
+  transition: opacity 160ms ease-out;
+}
+
+.word-vector-unit--dark-reveal {
+  z-index: 1;
+  filter: invert(1) grayscale(1) brightness(2) !important;
+  transform-origin: 50% 50%;
+}
+
+.word-vector-unit--tremble-in {
+  transform-origin: 50% 100%;
+  transition: opacity 320ms ease-out;
+  animation: slide5-pink-continuous-tremble 560ms ease-in-out infinite;
+  animation-delay: var(--tremble-delay, 0ms);
+}
+
+@keyframes slide5-pink-continuous-tremble {
+  0%, 100% { transform: translate3d(0, -2px, 0); }
+  50% { transform: translate3d(0, 2px, 0); }
+}
+
+.word-vector-unit--impact-type {
+  transform-origin: 0% 100%;
+  transition:
+    opacity 140ms linear,
+    transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.word-vector-unit--pink-angry-type {
+  transform-origin: 50% 65%;
+}
+
+.word-vector-unit--pink-impact-block {
+  transform-origin: 50% 100%;
+  transition: opacity 80ms linear;
+}
+
+.word-vector-unit--pink-left-barrage {
+  transform-origin: 50% 65%;
+}
+
+.word-vector-unit--dialogue {
+  transition:
+    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 480ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 360ms ease-out;
+}
+
+.word-vector-unit--demo-scale {
+  transform-origin: 50% 100%;
+  transition:
+    transform 90ms linear,
+    opacity 120ms linear;
+}
+
+
+.word-vector-unit--followup {
+  transition:
+    opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 420ms ease-out;
+}
+
+.word-vector-unit--fast-sequence {
+  transition:
+    opacity 120ms ease-out,
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 100ms ease-out;
+}
+
+.word-vector-unit--voice-shake {
+  animation: voice-shake 620ms ease-out var(--voice-start-delay, 0ms) both;
+}
+
+.word-vector-unit--voice-grow {
+  transform-origin: 50% 100%;
+  animation: voice-grow 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--voice-start-delay, 0ms) both;
+}
+
+.word-vector-unit--voice-staccato {
+  animation: voice-staccato 420ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--voice-start-delay, 0ms) + var(--voice-delay, 0ms)) both;
+}
+
+.word-vector-unit--voice-swing {
+  transform-origin: 50% 100%;
+  animation: voice-swing 920ms cubic-bezier(0.16, 1, 0.3, 1) var(--voice-start-delay, 0ms) both;
+}
+
+.word-vector-unit--voice-bounce {
+  transform-origin: 50% 100%;
+  animation: voice-bounce 560ms cubic-bezier(0.2, 0.9, 0.25, 1.2)
+    calc(var(--voice-start-delay, 0ms) + var(--voice-delay, 0ms)) both;
+}
+
+.word-vector-unit--voice-shrink {
+  transform-origin: 50% 100%;
+  animation: voice-shrink 720ms cubic-bezier(0.16, 1, 0.3, 1) var(--voice-start-delay, 0ms) both;
+}
+
+@keyframes voice-shake {
+  0% { opacity: 0; transform: translateY(0); }
+  18% { opacity: 1; transform: translateY(-9px); }
+  36% { transform: translateY(8px); }
+  54% { transform: translateY(-6px); }
+  72% { transform: translateY(4px); }
+  88% { transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes voice-grow {
+  0% { opacity: 0; transform: scale(0.94); }
+  24% { opacity: 1; }
+  58% { opacity: 1; transform: scale(1.48); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes voice-staccato {
+  0% { opacity: 0; transform: translateX(42px); }
+  62% { opacity: 1; transform: translateX(-3px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes voice-swing {
+  0% { opacity: 0; transform: translateX(-118px) translateY(8px) rotate(-7deg); }
+  42% { opacity: 1; transform: translateX(14px) translateY(-2px) rotate(2.2deg); }
+  64% { opacity: 1; transform: translateX(-8px) rotate(-1.2deg); }
+  82% { opacity: 1; transform: translateX(3px) rotate(0.45deg); }
+  100% { opacity: 1; transform: translateX(0) rotate(0); }
+}
+
+@keyframes voice-bounce {
+  0% { opacity: 0; transform: translateY(34px) scaleY(0.88); }
+  48% { opacity: 1; transform: translateY(-13px) scaleY(1.04); }
+  72% { opacity: 1; transform: translateY(5px) scaleY(0.98); }
+  88% { opacity: 1; transform: translateY(-2px) scaleY(1.01); }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+@keyframes voice-shrink {
+  0% { opacity: 0; transform: scale(1.08); }
+  25% { opacity: 1; }
+  62% { opacity: 1; transform: scale(0.62); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.slide--sample[hidden] {
+  display: none !important;
+}
+
+.slide__frame {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+}
+
+.slide__artboard {
+  position: relative;
+  width: 100vw;
+  height: 56.25vw;
+  max-width: 177.777778svh;
+  max-height: 100svh;
+  background: var(--paper);
+  transform-origin: center;
+  will-change: transform;
+}
+
+.slide__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.vector-row {
+  will-change: transform;
+}
+
+.sentence-unit-motion {
+  position: absolute;
+  z-index: 1;
+}
+
+.illustrator-base {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sentence-unit {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.vector-glyph {
+  fill: var(--ink);
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0) scale(1);
+  transform-box: fill-box;
+  transform-origin: 50% 58%;
+  transition:
+    opacity 280ms cubic-bezier(0.215, 0.61, 0.355, 1),
+    transform 280ms cubic-bezier(0.215, 0.61, 0.355, 1),
+    filter 240ms ease-out;
+}
+
+.vector-glyph.sentence-unit {
+  transform-box: border-box;
+}
+
+.vector-glyph.is-omitted {
+  opacity: 0;
+  filter: blur(0.55px);
+  transform: translateY(-1.25px) scale(0.988);
+  transition-duration: 210ms;
+}
+
+.is-hard-reset .vector-glyph {
+  transition: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .camera-monitor {
+    width: 160px;
+    height: 108px;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .opening-blank,
+  .slide {
+    min-height: 100svh;
+  }
+
+  .vector-row,
+  .slide__artboard {
+    transform: none !important;
+  }
+
+  .vector-glyph {
+    filter: none;
+    transform: none;
+    transition: none;
+  }
+
+  .vector-glyph.is-omitted {
+    opacity: 0;
+  }
+
+  .word-vector-unit--tremble-in {
+    animation: none;
+  }
+}
+
+.blink-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blink-flash.is-active {
+  animation: blink-screen-flash 170ms ease-out both;
+}
+
+@keyframes blink-screen-flash {
+  0% { opacity: 0; }
+  35% { opacity: 0.26; }
+  100% { opacity: 0; }
+}
+
+.idle-omission-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 1900;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+  pointer-events: none;
+}
+
+.idle-omission-prompt[hidden] {
+  display: none;
+}
+
+.idle-omission-prompt img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>한 편의 영화를 놓치는 두 가지 방법</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="한 편의 영화를 놓치는 두 가지 방법" />
+    <meta property="og:description" content="범인이 누군지 알 수 없는 사건이 터질 때 최우선으로 소환되는 용의자" />
+    <meta property="og:image" content="assets/guidelines/web-preview.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1450" />
+    <meta property="og:image:height" content="752" />
+    <meta property="og:image:alt" content="유주얼 서스펙트 웹 미리보기" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="한 편의 영화를 놓치는 두 가지 방법" />
+    <meta name="twitter:description" content="범인이 누군지 알 수 없는 사건이 터질 때 최우선으로 소환되는 용의자" />
+    <meta name="twitter:image" content="assets/guidelines/web-preview.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="camera-gate" id="camera-gate" aria-label="가이드라인 및 카메라 허용" hidden>
+      <img class="camera-gate__artwork camera-gate__artwork--before" src="assets/guidelines/guideline-1.svg" alt="" aria-hidden="true" />
+      <img class="camera-gate__artwork camera-gate__artwork--loading" src="assets/guidelines/guideline-3.svg" alt="" aria-hidden="true" />
+      <img class="camera-gate__artwork camera-gate__artwork--allowed" src="assets/guidelines/guideline-2.svg" alt="" aria-hidden="true" />
+      <div class="camera-gate__inner">
+        <p>가이드라인 텍스트입니다.</p>
+        <p>아래 카메라 허용 버튼을 눌러 카메라를 허용해주세요.</p>
+        <button id="camera-start" type="button"><span>카메라 허용</span></button>
+        <p>이후 키보드에서 Q를 눌러 가이드라인 텍스트를 꺼주세요.</p>
+      </div>
+    </aside>
+
+    <aside
+      class="idle-omission-prompt"
+      id="idle-omission-prompt"
+      aria-label="얼굴 위치와 스크롤 안내"
+      aria-live="assertive"
+      hidden
+    >
+      <img class="idle-omission-prompt__base" src="assets/guidelines/idle-cover-base.svg" alt="얼굴을 화면 중앙에 오도록 위치해 주세요. 화살표 키를 눌러 아래로 스크롤해 주세요." />
+    </aside>
+
+    <div class="camera-hud" id="camera-hud" hidden>
+      <div class="camera-monitor" id="camera-monitor">
+        <video
+          class="camera-video"
+          id="camera-video"
+          aria-label="실시간 카메라 영상"
+          autoplay
+          muted
+          playsinline
+        ></video>
+      </div>
+      <div class="eye-open-meter" aria-live="polite">
+        <span class="eye-open-meter__label">눈을 뜬 시간</span>
+        <strong class="eye-open-meter__value" id="eye-open-duration">0.0초</strong>
+        <span class="eye-open-meter__level" id="omission-level">단어 생략</span>
+        <span class="eye-open-meter__action" id="omission-action">단어 1개 생략</span>
+      </div>
+    </div>
+
+    <main id="slides">
+      <section class="opening-blank opening-cover slide--word-vector" id="slide-cover" data-editor-folder="표지" aria-label="표지">
+      </section>
+
+      <!-- TODO(final): Remove data-editor-folder and the editor folder badges before release. -->
+      <section class="slide slide--word-vector" id="slide-1" data-editor-folder="1" aria-label="1번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-2" data-editor-folder="2" aria-label="2번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-3" data-editor-folder="3" aria-label="3번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-4" data-editor-folder="4" aria-label="4번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-5" data-editor-folder="5" aria-label="5번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-6" data-editor-folder="6" aria-label="6번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-7" data-editor-folder="7" aria-label="7번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-8" data-editor-folder="8" aria-label="8번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-9" data-editor-folder="9" aria-label="9번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-10" data-editor-folder="10" aria-label="10번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-11" data-editor-folder="11" aria-label="11번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-12" data-editor-folder="12" aria-label="12번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-13" data-editor-folder="13" aria-label="13번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-14" data-editor-folder="14" aria-label="14번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-15" data-editor-folder="15" aria-label="15번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-16" data-editor-folder="16" aria-label="16번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-17" data-editor-folder="17" aria-label="17번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-18" data-editor-folder="18" aria-label="18번 슬라이드">
+      </section>
+
+      <section class="slide slide--word-vector" id="slide-19" data-editor-folder="19" aria-label="19번 슬라이드">
+      </section>
+
+      <section class="opening-blank ending-blank" aria-label="빈 마지막 화면">
+        <div class="opening-blank__page" aria-hidden="true"></div>
+      </section>
+    </main>
+
+    <script defer src="js/config.js"></script>
+    <script defer src="assets/slide-cover-word/manifest.js"></script>
+    <script defer src="assets/slide-1-word/manifest.js"></script>
+    <script defer src="assets/slide-2-word/manifest.js"></script>
+    <script defer src="assets/slide-3-word/manifest.js"></script>
+    <script defer src="assets/slide-4-word/manifest.js"></script>
+    <script defer src="assets/slide-5-word/manifest.js"></script>
+    <script defer src="assets/slide-6-word/manifest.js"></script>
+    <script defer src="assets/slide-7-word/manifest.js"></script>
+    <script defer src="assets/slide-8-word/manifest.js"></script>
+    <script defer src="assets/slide-9-word/manifest.js"></script>
+    <script defer src="assets/slide-10-word/manifest.js"></script>
+    <script defer src="assets/slide-11-word/manifest.js"></script>
+    <script defer src="assets/slide-12-word/manifest.js"></script>
+    <script defer src="assets/slide-13-word/manifest.js"></script>
+    <script defer src="assets/slide-14-word/manifest.js"></script>
+    <script defer src="assets/slide-15-word/manifest.js"></script>
+    <script defer src="assets/slide-16-word/manifest.js"></script>
+    <script defer src="assets/slide-17-word/manifest.js"></script>
+    <script defer src="assets/slide-18-word/manifest.js"></script>
+    <script defer src="assets/slide-19-word/manifest.js"></script>
+    <script defer src="js/word-slide.js"></script>
+    <script defer src="js/blink-detector.js"></script>
+    <script defer src="js/app.js"></script>
+  </body>
+</html>
