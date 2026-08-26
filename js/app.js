@@ -528,6 +528,8 @@
       furthestScrollY = 0;
       lastScrollY = 0;
       global.scrollTo(0, 0);
+      global.WordSlide.lastScrollY = 0;
+      global.WordSlide.scrollDirection = 1;
       playCoverPuzzle(primaryMountedSlides[0], function () {
         document.documentElement.classList.add("cover-intro-complete");
       });

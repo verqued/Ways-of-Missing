@@ -62,8 +62,11 @@
   WordSlide.omissionMinimumDwellMs = 1600;
   WordSlide.getExclusiveFocus = function () {
     var currentScrollY = global.scrollY || 0;
-    if (currentScrollY > WordSlide.lastScrollY) WordSlide.scrollDirection = 1;
-    if (currentScrollY < WordSlide.lastScrollY) WordSlide.scrollDirection = -1;
+    // This presentation is deliberately forward-only. Mobile viewport and
+    // address-bar resizing can briefly lower scrollY without user intent; if
+    // that transient shift is treated as reverse scrolling, every later slide
+    // is marked complete and its non-typing groups are pre-revealed.
+    WordSlide.scrollDirection = 1;
     WordSlide.lastScrollY = currentScrollY;
     var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
     var focusTop = viewportHeight * 0.45;
@@ -369,11 +372,11 @@
             ? (typeof predecessorRegion.fastEndAt === "number"
               && predecessorNow >= predecessorRegion.fastEndAt)
             : (predecessorIsPinkImpact
-              ? (this.prefersReducedMotion || (this._pinkAngryInteractionComplete
+              ? (this._pinkAngryInteractionComplete
                 && typeof predecessorRegion.pinkImpactEndAt === "number"
-                && predecessorNow >= predecessorRegion.pinkImpactEndAt))
+                && predecessorNow >= predecessorRegion.pinkImpactEndAt)
             : (predecessorIsPinkAngry
-              ? (this.prefersReducedMotion || this._pinkAngryInteractionComplete)
+              ? this._pinkAngryInteractionComplete
             : (predecessorIsTypeRight
               ? (typeof predecessorRegion.typeRightEndAt === "number"
                 && predecessorNow >= predecessorRegion.typeRightEndAt)
@@ -528,6 +531,14 @@
           if (pinkAngryTimelineProgress < 1) this.requestScrollUpdate();
         }
       }
+      var isPrimaryPinkAngryRegion = textMode === "pink-angry-type"
+        || textMode === "pink-top-impact";
+      if (this.prefersReducedMotion && isPrimaryPinkAngryRegion && progress > 0.001) {
+        if (typeof this._pinkAngryInteractionStartedAt !== "number") {
+          this._pinkAngryInteractionStartedAt = global.performance.now();
+        }
+        this._pinkAngryInteractionComplete = true;
+      }
       var pinkBarrageTimelineProgress = progress;
       if (this.data.id === "5" && textMode === "pink-left-barrage" && progress > 0.001) {
         if (typeof region.pinkBarrageStartAt !== "number") region.pinkBarrageStartAt = global.performance.now();
@@ -538,12 +549,16 @@
       var pinkImpactTimelineProgress = 0;
       var pinkImpactDelayReady = typeof this._pinkAngryInteractionStartedAt === "number"
         && global.performance.now() >= this._pinkAngryInteractionStartedAt + 800;
-      if (textMode === "pink-impact-block" && pinkImpactDelayReady) {
+      var pinkImpactSequenceReady = this.prefersReducedMotion
+        ? this._pinkAngryInteractionComplete
+        : pinkImpactDelayReady;
+      if (textMode === "pink-impact-block" && pinkImpactSequenceReady) {
         if (typeof region.pinkImpactStartAt !== "number") {
           region.pinkImpactStartAt = global.performance.now();
-          region.pinkImpactEndAt = region.pinkImpactStartAt + 900;
+          region.pinkImpactEndAt = region.pinkImpactStartAt
+            + (this.prefersReducedMotion ? 0 : 900);
         }
-        pinkImpactTimelineProgress = Math.max(0, Math.min(1,
+        pinkImpactTimelineProgress = this.prefersReducedMotion ? 1 : Math.max(0, Math.min(1,
           (global.performance.now() - region.pinkImpactStartAt) / 900));
         if (pinkImpactTimelineProgress < 1) this.requestScrollUpdate();
       }
@@ -603,7 +618,7 @@
         var isPinkImpactBlock = textMode === "pink-impact-block";
         var isPinkLeftBarrage = textMode === "pink-left-barrage";
         var isUnderlineLeftToRight = textMode === "underline-left-to-right";
-        var isPinkImpactReady = this.prefersReducedMotion || pinkImpactDelayReady;
+        var isPinkImpactReady = pinkImpactSequenceReady;
         var isFastSequence = textMode === "fast-sequence";
         var isVoiceStaccato = textMode === "voice-staccato";
         var isTypingWord = isWord && (isTypeRight
