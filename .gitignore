@@ -1,0 +1,5 @@
+.DS_Store
+**/.DS_Store
+
+# Large editable/build originals stay local and are not published by Pages.
+/원본/

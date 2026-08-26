@@ -51,18 +51,47 @@
     var primaryMountedSlides = [new global.WordSlide(
       coverSection,
       cloneRuntimeSlideData(coverData)
-    ).mount()].concat(slideData.map(function (data, index) {
+    )].concat(slideData.map(function (data, index) {
       return new global.WordSlide(
         document.querySelector("#slide-" + (index + 1)),
         cloneRuntimeSlideData(data)
-      ).mount();
+      );
     }));
     var loopCoverSlide = new global.WordSlide(
       loopCoverSection,
       cloneRuntimeSlideData(coverData)
     ).mount();
-    var mountedSlides = primaryMountedSlides.concat([loopCoverSlide]);
-    var wordSlide = mountedSlides[1];
+    var virtualSlideIndex = -1;
+    var virtualSlidesBehind = 1;
+    var virtualSlidesAhead = 3;
+
+    function updateVirtualSlideWindow(nextIndex, force) {
+      nextIndex = Math.max(0, Math.min(primaryMountedSlides.length - 1, nextIndex));
+      if (!force && nextIndex === virtualSlideIndex) return;
+      virtualSlideIndex = nextIndex;
+      var firstKeptIndex = Math.max(0, nextIndex - virtualSlidesBehind);
+      var lastKeptIndex = Math.min(primaryMountedSlides.length - 1, nextIndex + virtualSlidesAhead);
+      primaryMountedSlides.forEach(function (slide, index) {
+        if (index >= firstKeptIndex && index <= lastKeptIndex) {
+          slide.mount();
+          slide.requestScrollUpdate();
+        } else {
+          slide.unmount();
+        }
+      });
+    }
+
+    function currentPrimarySlideIndex() {
+      var readingLine = (global.scrollY || 0) + (global.innerHeight || 0) * 0.55;
+      var currentIndex = 0;
+      primaryMountedSlides.forEach(function (slide, index) {
+        if (slide.section.offsetTop <= readingLine) currentIndex = index;
+      });
+      return currentIndex;
+    }
+
+    updateVirtualSlideWindow(0, true);
+    var wordSlide = primaryMountedSlides[1];
     var history = [];
     var lastBlinkAt = -Infinity;
     var lastScrollY = global.scrollY || 0;
@@ -95,6 +124,49 @@
     var lastScrollInputAt = global.performance.now();
     var loopBoundaryY = Infinity;
     var loopRepositioning = false;
+    var coverPuzzleRunning = false;
+    var coverPuzzleTimer = 0;
+
+    function playCoverPuzzle(slide, onComplete) {
+      if (!slide || !slide.groups || !slide.groups[0] || coverPuzzleRunning) return false;
+      var pieces = slide.groups[0];
+      if (!pieces.length) return false;
+      coverPuzzleRunning = true;
+      document.documentElement.classList.add("cover-puzzle-lock");
+      global.cancelAnimationFrame(controlledScrollFrame);
+      controlledScrollFrame = 0;
+      controlledScrollTarget = global.scrollY || 0;
+      pieces.forEach(function (piece, index) {
+        var direction = index % 4;
+        var horizontalDistance = 36 + index % 5 * 7;
+        var verticalDistance = 31 + index % 5 * 6;
+        var horizontal = direction === 0 ? -horizontalDistance
+          : (direction === 1 ? horizontalDistance : 0);
+        var vertical = direction === 2 ? -verticalDistance
+          : (direction === 3 ? verticalDistance : 0);
+        piece.style.setProperty("--puzzle-x", horizontal.toFixed(2) + "vw");
+        piece.style.setProperty("--puzzle-y", vertical.toFixed(2) + "vh");
+        piece.style.setProperty("--puzzle-rotate", "0deg");
+        piece.style.setProperty("--puzzle-delay", Math.min(index * 34, 430) + "ms");
+        piece.classList.remove("is-cover-puzzle-piece");
+      });
+      void pieces[0].offsetWidth;
+      pieces.forEach(function (piece) { piece.classList.add("is-cover-puzzle-piece"); });
+      global.clearTimeout(coverPuzzleTimer);
+      coverPuzzleTimer = global.setTimeout(function () {
+        pieces.forEach(function (piece) {
+          piece.classList.remove("is-cover-puzzle-piece");
+          piece.style.removeProperty("--puzzle-x");
+          piece.style.removeProperty("--puzzle-y");
+          piece.style.removeProperty("--puzzle-rotate");
+          piece.style.removeProperty("--puzzle-delay");
+        });
+        coverPuzzleRunning = false;
+        document.documentElement.classList.remove("cover-puzzle-lock");
+        if (onComplete) onComplete();
+      }, 1660);
+      return true;
+    }
 
     function isGuidelineVisible() {
       return gate && !gate.hidden
@@ -107,27 +179,32 @@
     }
 
     function wrapForwardLoop(scrollY) {
-      if (loopRepositioning || !isFinite(loopBoundaryY) || scrollY < loopBoundaryY) return false;
-      var wrappedOffset = Math.max(0, scrollY - loopBoundaryY);
-      var wrappedTargetOffset = Math.max(0, controlledScrollTarget - loopBoundaryY);
-      document.documentElement.classList.add("cover-intro-complete");
+      if (loopRepositioning) return true;
+      if (!isFinite(loopBoundaryY) || scrollY < loopBoundaryY) return false;
+      controlledScrollTarget = loopBoundaryY;
+      furthestScrollY = loopBoundaryY;
+      lastScrollY = loopBoundaryY;
+      global.scrollTo(0, loopBoundaryY);
       refreshLoopBoundary();
-      var coverY = coverSection.offsetTop;
-      var wrappedY = coverY + wrappedOffset;
-      var wrappedTarget = coverY + wrappedTargetOffset;
       loopRepositioning = true;
-      primaryMountedSlides.forEach(function (slide) { slide.reset(); });
-      global.WordSlide.voiceReadyAt = 0;
-      global.WordSlide.lastScrollY = wrappedY;
-      global.WordSlide.scrollDirection = 1;
-      global.WordSlide.omissionScrollInput = 0;
-      history.length = 0;
-      controlledScrollTarget = Math.max(wrappedY, wrappedTarget);
-      furthestScrollY = wrappedY;
-      lastScrollY = wrappedY;
-      global.scrollTo(0, wrappedY);
-      primaryMountedSlides.forEach(function (slide) { slide.updateScrollMotion(); });
-      global.requestAnimationFrame(function () {
+      // Re-arm the cloned cover on every cycle so it always performs the same
+      // assembly used by the opening cover, even after many loop passes.
+      loopCoverSlide.reset();
+      loopCoverSlide.updateScrollMotion();
+      playCoverPuzzle(loopCoverSlide, function () {
+        document.documentElement.classList.remove("cover-intro-complete");
+        primaryMountedSlides.forEach(function (slide) { slide.reset(); });
+        global.WordSlide.voiceReadyAt = 0;
+        global.WordSlide.lastScrollY = 0;
+        global.WordSlide.scrollDirection = 1;
+        global.WordSlide.omissionScrollInput = 0;
+        history.length = 0;
+        controlledScrollTarget = 0;
+        furthestScrollY = 0;
+        lastScrollY = 0;
+        global.scrollTo(0, 0);
+        updateVirtualSlideWindow(0, true);
+        primaryMountedSlides.forEach(function (slide) { slide.updateScrollMotion(); });
         loopCoverSlide.reset();
         loopCoverSlide.requestScrollUpdate();
         loopRepositioning = false;
@@ -144,10 +221,9 @@
 
     function animateControlledScroll() {
       controlledScrollFrame = 0;
-      if (isGuidelineVisible()) return;
+      if (isGuidelineVisible() || coverPuzzleRunning) return;
       var current = global.scrollY || 0;
       if (wrapForwardLoop(current)) {
-        controlledScrollFrame = global.requestAnimationFrame(animateControlledScroll);
         return;
       }
       var distance = controlledScrollTarget - current;
@@ -162,7 +238,7 @@
     }
 
     function requestControlledScroll(delta) {
-      if (isGuidelineVisible()) return;
+      if (isGuidelineVisible() || coverPuzzleRunning) return;
       if (delta <= 0) return;
       var current = global.scrollY || 0;
       var maximumBacklog = Math.min(210, Math.max(120, global.innerHeight * 0.22));
@@ -342,6 +418,7 @@
       furthestScrollY = scrollY;
       if (!controlledScrollFrame) controlledScrollTarget = scrollY;
       lastScrollY = scrollY;
+      updateVirtualSlideWindow(currentPrimarySlideIndex());
     }
 
     function setCameraButtonLabel(label) {
@@ -420,6 +497,13 @@
         if (!cameraPermissionGranted) return;
         if (!presentationUiDismissed) {
           presentationUiDismissed = true;
+          controlledScrollTarget = 0;
+          furthestScrollY = 0;
+          lastScrollY = 0;
+          global.scrollTo(0, 0);
+          playCoverPuzzle(primaryMountedSlides[0], function () {
+            document.documentElement.classList.add("cover-intro-complete");
+          });
           document.body.classList.add("presentation-ui-hidden");
           noteIdleOmissionActivity(global.performance.now());
         }
@@ -428,6 +512,13 @@
       if (!isTyping && isGuidelineVisible()) {
         if (/^[0-9]$/.test(event.key) || event.key === "b" || event.key === "B"
             || event.key === "ArrowDown" || event.key === "ArrowUp"
+            || event.key === "PageDown" || event.key === "PageUp" || event.key === " ") {
+          event.preventDefault();
+        }
+        return;
+      }
+      if (!isTyping && coverPuzzleRunning) {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp"
             || event.key === "PageDown" || event.key === "PageUp" || event.key === " ") {
           event.preventDefault();
         }
@@ -459,7 +550,7 @@
       noteIdleOmissionActivity(lastScrollInputAt);
     }, { passive: true });
     global.addEventListener("touchmove", function (event) {
-      if (isGuidelineVisible()) event.preventDefault();
+      if (isGuidelineVisible() || coverPuzzleRunning) event.preventDefault();
     }, { passive: false });
     global.addEventListener("touchmove", function () {
       lastScrollInputAt = global.performance.now();

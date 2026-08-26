@@ -271,6 +271,11 @@ main {
   padding-top: max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px));
 }
 
+.loop-cover-buffer {
+  --cover-pink-center-offset: max(6.13vw, 10.897svh);
+  padding-top: max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px));
+}
+
 .cover-intro-complete #slide-cover {
   padding-top: 0;
 }
@@ -279,6 +284,13 @@ main {
   width: 100%;
   height: 100svh;
   background: var(--paper);
+}
+
+/* Keep a short breath after slide 19 without making the visitor cross a full
+   empty viewport before the looping cover arrives. */
+.ending-blank,
+.ending-blank .opening-blank__page {
+  height: 38svh;
 }
 
 .slide {
@@ -372,6 +384,36 @@ main {
   transition:
     opacity 260ms cubic-bezier(0.215, 0.61, 0.355, 1),
     transform 280ms cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+html.cover-puzzle-lock,
+html.cover-puzzle-lock body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.word-vector-unit.is-cover-puzzle-piece {
+  animation: cover-puzzle-assemble 1.08s cubic-bezier(.16,.82,.22,1) var(--puzzle-delay, 0ms) both;
+  transition: none !important;
+}
+
+@keyframes cover-puzzle-assemble {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translate3d(var(--puzzle-x, 0), var(--puzzle-y, 0), 0)
+      rotate(var(--puzzle-rotate, 0deg)) scale(.72);
+  }
+  68% {
+    opacity: 1;
+    filter: blur(.35px);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1.035);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
 }
 
 /* Illustrator raster/placed artwork is photographic content. Grayscale is

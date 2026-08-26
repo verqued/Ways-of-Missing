@@ -10,6 +10,7 @@
     this.legacySlide1InteractionsEnabled = data.id === "1"
       && Boolean(global.APP_CONFIG.interaction.legacySlide1InteractionsEnabled);
     this.prefersReducedMotion = global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    WordSlide.instances.push(this);
   }
 
   WordSlide.instances = [];
@@ -30,6 +31,7 @@
     var focusBottom = viewportHeight * 0.65;
     var candidates = [];
     WordSlide.instances.forEach(function (slide, slideOrder) {
+      if (!slide.artboard || !slide.artboard.isConnected) return;
       var rect = slide.artboard.getBoundingClientRect();
       var seenAnchors = {};
       slide.data.markerRegions.forEach(function (region, regionIndex) {
@@ -127,6 +129,7 @@
   };
 
   WordSlide.prototype.mount = function () {
+    if (this.artboard && this.artboard.isConnected) return this;
     var artboard = document.createElement("div");
     artboard.className = "slide__vector-artboard";
     var groups = this.data.markerRegions.map(function () { return []; });
@@ -189,7 +192,6 @@
     }).forEach(function (anchorIndex, order) {
       this.anchorOrderByIndex[anchorIndex] = order;
     }, this);
-    WordSlide.instances.push(this);
     this.groups.forEach(function (group, groupIndex) {
       var groupUsesTypeRight = this.data.markerRegions[groupIndex]
         && this.data.markerRegions[groupIndex].interactionType === "type-right";
@@ -210,7 +212,27 @@
     return this;
   };
 
+  WordSlide.prototype.unmount = function () {
+    if (!this.artboard) return this;
+    global.cancelAnimationFrame(this.scrollFrame);
+    this.scrollFrame = 0;
+    this.groups.forEach(function (group) {
+      group.forEach(function (unit) {
+        if (unit._pinkTrembleAnimation) unit._pinkTrembleAnimation.cancel();
+        if (unit._pinkBarrageAnimation) unit._pinkBarrageAnimation.cancel();
+        unit._pinkTrembleAnimation = null;
+        unit._pinkBarrageAnimation = null;
+      });
+    });
+    if (this.artboard.parentNode) this.artboard.parentNode.removeChild(this.artboard);
+    this.artboard = null;
+    this.groups = [];
+    this.darkRevealPanels = {};
+    return this;
+  };
+
   WordSlide.prototype.updateScrollMotion = function () {
+    if (!this.artboard || !this.artboard.isConnected) return;
     var rect = this.artboard.getBoundingClientRect();
     var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
     var exclusiveFocus = WordSlide.getExclusiveFocus();
@@ -397,8 +419,14 @@
       var isExclusiveTypeRightFocus = exclusiveFocus
         && exclusiveFocus.slide === this
         && anchorOrder === exclusiveFocus.anchorOrder;
+      // A passed anchor may report progress=1 even when a fast wheel gesture
+      // skipped it completely.  Only start its typing clock while the marker is
+      // still on screen, otherwise the animation is consumed invisibly.
+      var isVisiblePassedTypeRight = progress >= 0.999
+        && markerPosition >= 0
+        && markerPosition <= viewportHeight;
       if (isTypeRightRegion && progress > 0.001
-          && (isExclusiveTypeRightFocus || progress >= 0.999)
+          && (isExclusiveTypeRightFocus || isVisiblePassedTypeRight)
           && typeof region.typeRightStartAt !== "number") {
         var typeRightWordCount = this.groups[index].filter(function (unit) {
           return unit.dataset.unitKind === "word";
@@ -705,14 +733,14 @@
           remainder = 1 - unitEased;
           opacity = unitEased;
         }
-        var motionX = isDemoScale || isDarkReveal || isTrembleIn || isImpactType || isPinkAngryType || isPinkImpactBlock || isPinkLeftBarrage ? 0 : (isDirectionalDialogue
+        var motionX = isDemoScale || isDarkReveal || isTrembleIn || isImpactType || isPinkAngryType || isPinkImpactBlock || isPinkLeftBarrage || isUnderlineLeftToRight ? 0 : (isDirectionalDialogue
           ? (isDialogueFromLeft ? -132 : 132)
           : (isCaptionBlock ? 72 : (isGroupedRight ? 104 : (isTypeRight ? 76 : (isGroupedLeft ? -104 : motion.x)))));
-        var motionY = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isPinkAngryType || isPinkImpactBlock || isPinkLeftBarrage ? 0 : (isWord ? (isTypingWord ? 4 : 0) : motion.y);
-        var motionScale = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isPinkAngryType || isPinkImpactBlock || isPinkLeftBarrage || isDirectionalDialogue || isWord ? 1 : motion.scale;
-        var motionRotate = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isDirectionalDialogue || isWord ? 0 : motion.rotate;
-        var motionBlur = isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType ? 0 : (isCaptionBlock ? 1 : (isWord ? (isTypingWord ? 0.8 : 1.2) : motion.blur));
-        var clip = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isDirectionalDialogue || isWord ? [0, 0, 0, 0] : motion.clip;
+        var motionY = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isPinkAngryType || isPinkImpactBlock || isPinkLeftBarrage || isUnderlineLeftToRight ? 0 : (isWord ? (isTypingWord ? 4 : 0) : motion.y);
+        var motionScale = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isPinkAngryType || isPinkImpactBlock || isPinkLeftBarrage || isUnderlineLeftToRight || isDirectionalDialogue || isWord ? 1 : motion.scale;
+        var motionRotate = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isUnderlineLeftToRight || isDirectionalDialogue || isWord ? 0 : motion.rotate;
+        var motionBlur = isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isUnderlineLeftToRight ? 0 : (isCaptionBlock ? 1 : (isWord ? (isTypingWord ? 0.8 : 1.2) : motion.blur));
+        var clip = isCaptionBlock || isGroupedMotion || isTypeRight || isDarkReveal || isTrembleIn || isImpactType || isUnderlineLeftToRight || isDirectionalDialogue || isWord ? [0, 0, 0, 0] : motion.clip;
         unit.style.setProperty("--scroll-x", (motionX * remainder).toFixed(2) + "px");
         unit.style.setProperty("--scroll-y", (motionY * remainder).toFixed(2) + "px");
         unit.style.setProperty("--scroll-scale", (1 + (motionScale - 1) * remainder).toFixed(4));
@@ -725,6 +753,14 @@
         unit.style.setProperty("--scroll-opacity", opacity.toFixed(3));
         if (isDarkReveal) {
           unit.style.setProperty("--clip-right", ((1 - darkTextProgress) * 100).toFixed(2) + "%");
+        }
+        if (isUnderlineLeftToRight) {
+          // Reveal the underline PathItem exported from 16.ai itself.  Keeping
+          // the original vector fixed and moving only the right clip edge makes
+          // it read as one clean stroke from left to right.
+          var underlineProgress = 1 - Math.pow(1 - progress, 3);
+          unit.style.setProperty("--clip-right", ((1 - underlineProgress) * 100).toFixed(2) + "%");
+          unit.style.setProperty("--scroll-opacity", (underlineProgress > 0.001 ? 1 : 0).toFixed(3));
         }
         if (isTrembleIn && !this.prefersReducedMotion) {
           var trembleDelay = -(Math.round(Number(unit.dataset.motionX || 0)) % 280);
@@ -855,6 +891,7 @@
   };
 
   WordSlide.prototype.requestScrollUpdate = function () {
+    if (!this.artboard || !this.artboard.isConnected) return;
     if (this.scrollFrame) return;
     this.scrollFrame = global.requestAnimationFrame(function () {
       this.scrollFrame = 0;
@@ -864,9 +901,14 @@
 
   WordSlide.prototype.initScrollMotion = function () {
     this.updateScrollMotion();
-    global.addEventListener("scroll", this.requestScrollUpdate.bind(this), { passive: true });
-    global.addEventListener("resize", this.requestScrollUpdate.bind(this), { passive: true });
-    global.addEventListener("load", this.requestScrollUpdate.bind(this), { once: true });
+    if (WordSlide.globalScrollMotionInitialized) return;
+    WordSlide.globalScrollMotionInitialized = true;
+    var requestMountedSlideUpdates = function () {
+      WordSlide.instances.forEach(function (slide) { slide.requestScrollUpdate(); });
+    };
+    global.addEventListener("scroll", requestMountedSlideUpdates, { passive: true });
+    global.addEventListener("resize", requestMountedSlideUpdates, { passive: true });
+    global.addEventListener("load", requestMountedSlideUpdates, { once: true });
   };
 
   WordSlide.prototype.isActive = function () {
