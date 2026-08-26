@@ -44,6 +44,7 @@
     var loopCoverSection = coverSection.cloneNode(false);
     loopCoverSection.removeAttribute("id");
     loopCoverSection.classList.add("loop-cover-buffer");
+    loopCoverSection.classList.add("is-loop-cover-pending");
     loopCoverSection.dataset.loopBuffer = "cover";
     loopCoverSection.setAttribute("aria-hidden", "true");
     slidesRoot.appendChild(loopCoverSection);
@@ -102,9 +103,8 @@
     var blinkFlashTimer = 0;
     var idleOmissionPrompt = document.querySelector("#idle-omission-prompt");
     var idleOmissionPromptTimer = 0;
-    var exhaustedOmissionStartedAt = 0;
-    var lastExhaustedBlinkAt = -Infinity;
-    var exhaustedBlinkCount = 0;
+    var idleOmissionQuietStartedAt = 0;
+    var idleOmissionCheckIntervalMs = 200;
 
     var gate = document.querySelector("#camera-gate");
     var startButton = document.querySelector("#camera-start");
@@ -132,6 +132,7 @@
       var pieces = slide.groups[0];
       if (!pieces.length) return false;
       coverPuzzleRunning = true;
+      if (slide.section) slide.section.classList.remove("is-loop-cover-pending");
       document.documentElement.classList.add("cover-puzzle-lock");
       global.cancelAnimationFrame(controlledScrollFrame);
       controlledScrollFrame = 0;
@@ -189,6 +190,7 @@
       loopRepositioning = true;
       // Re-arm the cloned cover on every cycle so it always performs the same
       // assembly used by the opening cover, even after many loop passes.
+      document.documentElement.classList.remove("cover-intro-complete");
       loopCoverSlide.reset();
       loopCoverSlide.updateScrollMotion();
       playCoverPuzzle(loopCoverSlide, function () {
@@ -206,6 +208,7 @@
         updateVirtualSlideWindow(0, true);
         primaryMountedSlides.forEach(function (slide) { slide.updateScrollMotion(); });
         loopCoverSlide.reset();
+        loopCoverSection.classList.add("is-loop-cover-pending");
         loopCoverSlide.requestScrollUpdate();
         loopRepositioning = false;
       });
@@ -314,46 +317,85 @@
       idleOmissionPrompt.hidden = true;
     }
 
+    function isVisibleIdleMotionTarget(target, includeTransparent) {
+      if (!target || !global.Element || !(target instanceof global.Element)) return true;
+      if ((blinkFlash && blinkFlash.contains(target))
+          || (idleOmissionPrompt && idleOmissionPrompt.contains(target))) return false;
+      if (!target.isConnected || target.closest("[hidden]")) return false;
+      var style = global.getComputedStyle(target);
+      if (style.display === "none" || style.visibility === "hidden"
+          || (!includeTransparent && Number(style.opacity) === 0)) return false;
+      var rect = target.getBoundingClientRect();
+      var viewportWidth = global.innerWidth || document.documentElement.clientWidth;
+      var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
+      return rect.bottom > 0 && rect.top < viewportHeight
+        && rect.right > 0 && rect.left < viewportWidth;
+    }
+
+    function hasActiveIdleBlockingMotion() {
+      if (coverPuzzleRunning || controlledScrollFrame || loopRepositioning) return true;
+      if (global.WordSlide.omissionPile.some(function (state) {
+        return state.clone && state.clone.isConnected && (!state.settled || state.dismissing);
+      })) return true;
+      if (global.WordSlide.instances.some(function (slide) {
+        return Boolean(slide.scrollFrame);
+      })) return true;
+      if (!document.getAnimations) return false;
+      return document.getAnimations().some(function (animation) {
+        if (animation.playState !== "running" && animation.playState !== "pending") return false;
+        var target = animation.effect && animation.effect.target;
+        return isVisibleIdleMotionTarget(target);
+      });
+    }
+
+    function handleIdleBlockingMotionStart(event) {
+      if (!isVisibleIdleMotionTarget(event.target, true)) return;
+      noteIdleOmissionActivity();
+    }
+
+    function canMonitorIdleOmission() {
+      return presentationUiDismissed
+        && !isGuidelineVisible()
+        && document.visibilityState !== "hidden";
+    }
+
     function scheduleIdleOmissionPrompt() {
       global.clearTimeout(idleOmissionPromptTimer);
       idleOmissionPromptTimer = 0;
-      if (!detector || !detector.running || isGuidelineVisible()
-          || !exhaustedOmissionStartedAt || exhaustedBlinkCount < 2) return;
+      if (!canMonitorIdleOmission()) {
+        idleOmissionQuietStartedAt = 0;
+        hideIdleOmissionPrompt();
+        return;
+      }
+      var now = global.performance.now();
+      if (hasActiveIdleBlockingMotion()) {
+        idleOmissionQuietStartedAt = 0;
+        idleOmissionPromptTimer = global.setTimeout(
+          scheduleIdleOmissionPrompt,
+          idleOmissionCheckIntervalMs
+        );
+        return;
+      }
+      if (!idleOmissionQuietStartedAt) idleOmissionQuietStartedAt = now;
       var delay = config.interaction.idleOmissionPromptDelayMs;
-      var exhaustedFor = global.performance.now() - exhaustedOmissionStartedAt;
-      idleOmissionPromptTimer = global.setTimeout(function checkIdleOmissionPrompt() {
-        idleOmissionPromptTimer = 0;
-        if (!detector || !detector.running || isGuidelineVisible()) return;
-        var now = global.performance.now();
-        var currentExhaustedFor = now - exhaustedOmissionStartedAt;
-        if (currentExhaustedFor < delay) {
-          scheduleIdleOmissionPrompt();
-          return;
-        }
-        if (now - lastExhaustedBlinkAt > 8000) return;
+      var quietFor = now - idleOmissionQuietStartedAt;
+      if (quietFor >= delay) {
         idleOmissionPrompt.hidden = false;
         void idleOmissionPrompt.offsetWidth;
         idleOmissionPrompt.classList.add("is-visible");
-      }, Math.max(0, delay - exhaustedFor));
-    }
-
-    function resetExhaustedOmissionPrompt() {
-      exhaustedOmissionStartedAt = 0;
-      lastExhaustedBlinkAt = -Infinity;
-      exhaustedBlinkCount = 0;
-      global.clearTimeout(idleOmissionPromptTimer);
-      idleOmissionPromptTimer = 0;
-      hideIdleOmissionPrompt();
+        return;
+      }
+      idleOmissionPromptTimer = global.setTimeout(
+        scheduleIdleOmissionPrompt,
+        Math.min(idleOmissionCheckIntervalMs, delay - quietFor)
+      );
     }
 
     function noteIdleOmissionActivity() {
-      resetExhaustedOmissionPrompt();
-    }
-
-    function noteExhaustedBlink(timestamp) {
-      if (!exhaustedOmissionStartedAt) exhaustedOmissionStartedAt = timestamp;
-      lastExhaustedBlinkAt = timestamp;
-      exhaustedBlinkCount += 1;
+      idleOmissionQuietStartedAt = 0;
+      global.clearTimeout(idleOmissionPromptTimer);
+      idleOmissionPromptTimer = 0;
+      hideIdleOmissionPrompt();
       scheduleIdleOmissionPrompt();
     }
 
@@ -378,10 +420,7 @@
       }).filter(Boolean).sort(function (first, second) {
         return first.distance - second.distance;
       });
-      if (!visibleTargets.length) {
-        noteExhaustedBlink(timestamp);
-        return;
-      }
+      if (!visibleTargets.length) return;
       var activeSlide = visibleTargets[0].slide;
       var groupIndex = visibleTargets[0].groupIndex;
       var level = omissionLevelFor(openDurationMs || 0);
@@ -391,11 +430,8 @@
         config.blink.paragraphGroupCount,
         allowIncomplete
       );
-      if (!omission) {
-        noteExhaustedBlink(timestamp);
-        return;
-      }
-      resetExhaustedOmissionPrompt();
+      if (!omission) return;
+      noteIdleOmissionActivity();
       omission.appliedAtY = global.scrollY || 0;
       history.push(omission);
       lastBlinkAt = timestamp;
@@ -547,7 +583,6 @@
     }, { passive: false });
     global.addEventListener("touchstart", function () {
       lastScrollInputAt = global.performance.now();
-      noteIdleOmissionActivity(lastScrollInputAt);
     }, { passive: true });
     global.addEventListener("touchmove", function (event) {
       if (isGuidelineVisible() || coverPuzzleRunning) event.preventDefault();
@@ -559,6 +594,9 @@
     global.addEventListener("scroll", handleScroll, { passive: true });
     global.addEventListener("resize", refreshLoopBoundary, { passive: true });
     global.addEventListener("load", refreshLoopBoundary, { once: true });
+    document.addEventListener("animationstart", handleIdleBlockingMotionStart, true);
+    document.addEventListener("transitionrun", handleIdleBlockingMotionStart, true);
+    document.addEventListener("visibilitychange", noteIdleOmissionActivity, { passive: true });
     global.addEventListener("beforeunload", function () {
       if (detector) detector.stop();
       global.cancelAnimationFrame(eyeTimerFrame);

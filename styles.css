@@ -276,6 +276,13 @@ main {
   padding-top: max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px));
 }
 
+/* Do not let the loop clone drift into view in its already-assembled state.
+   It is revealed exclusively by the same puzzle animation as the first cover. */
+.loop-cover-buffer.is-loop-cover-pending .word-vector-unit {
+  visibility: hidden;
+  opacity: 0 !important;
+}
+
 .opening-blank__page {
   width: 100%;
   height: 100svh;

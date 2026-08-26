@@ -4,6 +4,18 @@
   function WordSlide(section, data) {
     this.section = section;
     this.data = data;
+    this.authoredUnderlineRegionIndex = -1;
+    this.authoredUnderlineBounds = null;
+    if (data.id === "16") {
+      this.authoredUnderlineRegionIndex = data.markerRegions.findIndex(function (region) {
+        return region.interactionType === "underline-left-to-right";
+      });
+      var authoredBlackUnderline = data.markerRegions.find(function (region) {
+        var color = region.markerColor || {};
+        return color.type === "RGB" && color.r === 0 && color.g === 0 && color.b === 0;
+      });
+      if (authoredBlackUnderline) this.authoredUnderlineBounds = authoredBlackUnderline.bounds;
+    }
     this.groups = [];
     this.cursor = 0;
     this.scrollFrame = 0;
@@ -17,6 +29,24 @@
       if (slide1PinkImpactIndex >= 0 && slide1RegionBelowPink) {
         slide1RegionBelowPink.afterGroupIndex = slide1PinkImpactIndex;
       }
+    }
+    var numberedSlideId = Number(data.id);
+    if (numberedSlideId >= 13 && numberedSlideId <= 19) {
+      var spatialReadingOrder = data.markerRegions.map(function (region, index) {
+        return { region: region, index: index };
+      }).sort(function (left, right) {
+        var verticalDifference = left.region.bounds.y - right.region.bounds.y;
+        if (Math.abs(verticalDifference) > 8) return verticalDifference;
+        var horizontalDifference = left.region.bounds.x - right.region.bounds.x;
+        return Math.abs(horizontalDifference) > 1
+          ? horizontalDifference
+          : left.index - right.index;
+      });
+      spatialReadingOrder.forEach(function (entry, orderIndex) {
+        if (orderIndex === 0) return;
+        entry.region.afterGroupIndex = spatialReadingOrder[orderIndex - 1].index;
+        entry.region.startDelayAfterDependencyMs = 110;
+      });
     }
     this.prefersReducedMotion = global.matchMedia("(prefers-reduced-motion: reduce)").matches;
     WordSlide.instances.push(this);
@@ -148,6 +178,10 @@
       return a.index - b.index;
     }).forEach(function (unit) {
       var image = document.createElement("img");
+      var renderBounds = unit.groupIndex === this.authoredUnderlineRegionIndex
+          && this.authoredUnderlineBounds
+        ? this.authoredUnderlineBounds
+        : unit.bounds;
       image.className = "word-vector-unit word-vector-unit--" + unit.kind;
       var assetRevision = global.location.protocol === "file:"
         ? ""
@@ -164,13 +198,13 @@
       image.dataset.omissionStackable = unit.omissionStackable === false ? "false" : "true";
       image.dataset.omissionWhiteText = unit.omissionWhiteText ? "true" : "false";
       image.dataset.speakerLabel = unit.speakerLabel ? "true" : "false";
-      image.dataset.motionX = String(unit.bounds.x);
-      image.dataset.motionY = String(unit.bounds.y);
-      image.dataset.motionWidth = String(unit.bounds.width);
-      image.style.left = unit.bounds.x / 1920 * 100 + "%";
-      image.style.top = unit.bounds.y / 1080 * 100 + "%";
-      image.style.width = unit.bounds.width / 1920 * 100 + "%";
-      image.style.aspectRatio = unit.bounds.width + " / " + unit.bounds.height;
+      image.dataset.motionX = String(renderBounds.x);
+      image.dataset.motionY = String(renderBounds.y);
+      image.dataset.motionWidth = String(renderBounds.width);
+      image.style.left = renderBounds.x / 1920 * 100 + "%";
+      image.style.top = renderBounds.y / 1080 * 100 + "%";
+      image.style.width = renderBounds.width / 1920 * 100 + "%";
+      image.style.aspectRatio = renderBounds.width + " / " + renderBounds.height;
       artboard.appendChild(image);
       groups[unit.groupIndex].push(image);
     }, this);
@@ -304,7 +338,9 @@
       // its following block must wait until the cover has actually moved.
       // This prevents the initial scroll-motion pass from revealing it before
       // the visitor supplies even a small amount of scroll input.
-      var isCoverFirstReveal = this.section.id === "slide-cover"
+      var isCoverSection = this.section.id === "slide-cover"
+        || this.section.dataset.loopBuffer === "cover";
+      var isCoverFirstReveal = isCoverSection
         && !document.documentElement.classList.contains("cover-intro-complete")
         && index === 1;
       var coverHasStartedScrolling = this.section.getBoundingClientRect().top < -1;
@@ -316,6 +352,8 @@
         var predecessorIsFast = predecessorRegion.interactionType === "fast-sequence";
         var predecessorIsTypeRight = predecessorRegion.interactionType === "type-right";
         var predecessorIsPinkImpact = predecessorRegion.interactionType === "pink-impact-block";
+        var predecessorIsPinkAngry = predecessorRegion.interactionType === "pink-angry-type"
+          || predecessorRegion.interactionType === "pink-top-impact";
         var predecessorNow = global.performance.now();
         var predecessorAnchorIndex = typeof predecessorRegion.timingRegionIndex === "number"
           ? predecessorRegion.timingRegionIndex
@@ -334,10 +372,12 @@
               ? (this.prefersReducedMotion || (this._pinkAngryInteractionComplete
                 && typeof predecessorRegion.pinkImpactEndAt === "number"
                 && predecessorNow >= predecessorRegion.pinkImpactEndAt))
+            : (predecessorIsPinkAngry
+              ? (this.prefersReducedMotion || this._pinkAngryInteractionComplete)
             : (predecessorIsTypeRight
               ? (typeof predecessorRegion.typeRightEndAt === "number"
                 && predecessorNow >= predecessorRegion.typeRightEndAt)
-              : predecessorProgress >= 0.995)));
+              : predecessorProgress >= 0.995))));
         var dependencyDelay = Number(region.startDelayAfterDependencyMs || 0);
         if (predecessorComplete && dependencyDelay > 0) {
           var dependencyNow = global.performance.now();
