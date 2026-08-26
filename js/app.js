@@ -108,6 +108,7 @@
 
     var gate = document.querySelector("#camera-gate");
     var startButton = document.querySelector("#camera-start");
+    var mobileGuideDismiss = document.querySelector("#mobile-guide-dismiss");
     var cameraHud = document.querySelector("#camera-hud");
     var video = document.querySelector("#camera-video");
     var eyeOpenDuration = document.querySelector("#eye-open-duration");
@@ -520,6 +521,28 @@
 
     var presentationUiDismissed = false;
 
+    function dismissPresentationGuideline() {
+      if (!cameraPermissionGranted || presentationUiDismissed) return false;
+      presentationUiDismissed = true;
+      controlledScrollTarget = 0;
+      furthestScrollY = 0;
+      lastScrollY = 0;
+      global.scrollTo(0, 0);
+      playCoverPuzzle(primaryMountedSlides[0], function () {
+        document.documentElement.classList.add("cover-intro-complete");
+      });
+      document.body.classList.add("presentation-ui-hidden");
+      noteIdleOmissionActivity(global.performance.now());
+      return true;
+    }
+
+    if (mobileGuideDismiss) {
+      mobileGuideDismiss.addEventListener("click", function (event) {
+        event.preventDefault();
+        dismissPresentationGuideline();
+      });
+    }
+
     global.addEventListener("keydown", function (event) {
       var target = event.target;
       var isTyping = target && (
@@ -530,19 +553,7 @@
       );
       if (!isTyping && (event.key === "q" || event.key === "Q" || event.key === "ㅂ")) {
         event.preventDefault();
-        if (!cameraPermissionGranted) return;
-        if (!presentationUiDismissed) {
-          presentationUiDismissed = true;
-          controlledScrollTarget = 0;
-          furthestScrollY = 0;
-          lastScrollY = 0;
-          global.scrollTo(0, 0);
-          playCoverPuzzle(primaryMountedSlides[0], function () {
-            document.documentElement.classList.add("cover-intro-complete");
-          });
-          document.body.classList.add("presentation-ui-hidden");
-          noteIdleOmissionActivity(global.performance.now());
-        }
+        dismissPresentationGuideline();
         return;
       }
       if (!isTyping && isGuidelineVisible()) {

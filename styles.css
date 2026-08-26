@@ -36,6 +36,37 @@ video {
   font: inherit;
 }
 
+.orientation-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  align-content: center;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  background: #fff;
+  color: #000;
+  text-align: left;
+  touch-action: none;
+}
+
+.orientation-gate strong {
+  display: block;
+  width: 100%;
+  max-width: 94%;
+  font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: clamp(31px, 8.8vw, 62px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+  word-break: keep-all;
+}
+
 .camera-gate {
   position: fixed;
   inset: 0;
@@ -190,6 +221,10 @@ video {
   border: 0;
   background: transparent;
   color: transparent;
+}
+
+.camera-gate .mobile-guide-dismiss {
+  display: none;
 }
 
 .camera-hud {
@@ -730,6 +765,50 @@ html.cover-puzzle-lock body {
     height: 108px;
   }
 
+}
+
+@media (orientation: portrait) and (max-width: 900px),
+       (orientation: portrait) and (hover: none) and (pointer: coarse) {
+  html,
+  body {
+    overflow: hidden;
+  }
+
+  .orientation-gate {
+    display: flex;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px),
+       (orientation: landscape) and (hover: none) and (pointer: coarse) {
+  .camera-gate.is-camera-allowed .mobile-guide-dismiss {
+    position: absolute;
+    z-index: 3;
+    inset: auto;
+    left: 37.5%;
+    top: 47%;
+    display: block;
+    width: 9.5%;
+    min-width: 48px;
+    height: 22%;
+    min-height: 48px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .camera-hud {
+    left: max(10px, env(safe-area-inset-left));
+  }
+
+  .camera-monitor {
+    width: 144px;
+    height: 96px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
