@@ -9,6 +9,15 @@
     this.scrollFrame = 0;
     this.legacySlide1InteractionsEnabled = data.id === "1"
       && Boolean(global.APP_CONFIG.interaction.legacySlide1InteractionsEnabled);
+    if (data.id === "1") {
+      var slide1PinkImpactIndex = data.markerRegions.findIndex(function (region) {
+        return region.interactionType === "pink-impact-block";
+      });
+      var slide1RegionBelowPink = data.markerRegions[slide1PinkImpactIndex + 1];
+      if (slide1PinkImpactIndex >= 0 && slide1RegionBelowPink) {
+        slide1RegionBelowPink.afterGroupIndex = slide1PinkImpactIndex;
+      }
+    }
     this.prefersReducedMotion = global.matchMedia("(prefers-reduced-motion: reduce)").matches;
     WordSlide.instances.push(this);
   }
@@ -306,6 +315,7 @@
         var predecessorIsVoice = predecessorRegion.interactionType.indexOf("voice-") === 0;
         var predecessorIsFast = predecessorRegion.interactionType === "fast-sequence";
         var predecessorIsTypeRight = predecessorRegion.interactionType === "type-right";
+        var predecessorIsPinkImpact = predecessorRegion.interactionType === "pink-impact-block";
         var predecessorNow = global.performance.now();
         var predecessorAnchorIndex = typeof predecessorRegion.timingRegionIndex === "number"
           ? predecessorRegion.timingRegionIndex
@@ -320,10 +330,14 @@
           : (predecessorIsFast
             ? (typeof predecessorRegion.fastEndAt === "number"
               && predecessorNow >= predecessorRegion.fastEndAt)
+            : (predecessorIsPinkImpact
+              ? (this.prefersReducedMotion || (this._pinkAngryInteractionComplete
+                && typeof predecessorRegion.pinkImpactEndAt === "number"
+                && predecessorNow >= predecessorRegion.pinkImpactEndAt))
             : (predecessorIsTypeRight
               ? (typeof predecessorRegion.typeRightEndAt === "number"
                 && predecessorNow >= predecessorRegion.typeRightEndAt)
-              : predecessorProgress >= 0.995));
+              : predecessorProgress >= 0.995)));
         var dependencyDelay = Number(region.startDelayAfterDependencyMs || 0);
         if (predecessorComplete && dependencyDelay > 0) {
           var dependencyNow = global.performance.now();
@@ -487,6 +501,7 @@
       if (textMode === "pink-impact-block" && pinkImpactDelayReady) {
         if (typeof region.pinkImpactStartAt !== "number") {
           region.pinkImpactStartAt = global.performance.now();
+          region.pinkImpactEndAt = region.pinkImpactStartAt + 900;
         }
         pinkImpactTimelineProgress = Math.max(0, Math.min(1,
           (global.performance.now() - region.pinkImpactStartAt) / 900));
@@ -1261,7 +1276,7 @@
     var transientRegionState = [
       "maxForwardProgress", "dependencyReadyAt", "fastStartAt", "fastEndAt",
       "voiceQueued", "voiceStartDelay", "voiceStartAt", "voiceEndAt",
-      "typeRightStartAt", "typeRightDuration", "typeRightEndAt", "pinkImpactStartAt",
+      "typeRightStartAt", "typeRightDuration", "typeRightEndAt", "pinkImpactStartAt", "pinkImpactEndAt",
       "pinkAngryStartAt", "pinkAngryFollowupStartAt", "pinkBarrageStartAt",
       "dependencyRevealStartAt"
     ];
