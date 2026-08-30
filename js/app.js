@@ -246,7 +246,7 @@
       if (delta <= 0) return;
       var current = global.scrollY || 0;
       var maximumBacklog = Math.min(210, Math.max(120, global.innerHeight * 0.22));
-      var softenedDelta = Math.tanh(delta / 100) * 34;
+      var softenedDelta = Math.tanh(delta / 100) * 40;
       var requestedTarget = controlledScrollTarget + softenedDelta;
       controlledScrollTarget = clampScrollTarget(Math.min(current + maximumBacklog, requestedTarget));
       if (!controlledScrollFrame) controlledScrollFrame = global.requestAnimationFrame(animateControlledScroll);
