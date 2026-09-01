@@ -61,37 +61,53 @@
     var loopCoverSlide = new global.WordSlide(
       loopCoverSection,
       cloneRuntimeSlideData(coverData)
-    ).mount();
-    var virtualSlideIndex = -1;
-    var virtualSlidesBehind = 1;
-    var virtualSlidesAhead = 3;
+    );
+    var virtualSlideFrame = 0;
 
-    function updateVirtualSlideWindow(nextIndex, force) {
-      nextIndex = Math.max(0, Math.min(primaryMountedSlides.length - 1, nextIndex));
-      if (!force && nextIndex === virtualSlideIndex) return;
-      virtualSlideIndex = nextIndex;
-      var firstKeptIndex = Math.max(0, nextIndex - virtualSlidesBehind);
-      var lastKeptIndex = Math.min(primaryMountedSlides.length - 1, nextIndex + virtualSlidesAhead);
-      primaryMountedSlides.forEach(function (slide, index) {
-        if (index >= firstKeptIndex && index <= lastKeptIndex) {
+    function shouldMountSlide(slide, lookAheadPx) {
+      if (!slide || !slide.section) return false;
+      var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
+      var rect = slide.section.getBoundingClientRect();
+      return rect.bottom > -2 && rect.top < viewportHeight + lookAheadPx;
+    }
+
+    function applyVirtualSlideWindow() {
+      virtualSlideFrame = 0;
+      var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
+      // Keep only one viewport of unloaded content warm. It is close enough to
+      // finish loading before entry, but no longer creates three full future
+      // slides (and their compositor layers) at once.
+      var lookAheadPx = viewportHeight;
+      primaryMountedSlides.forEach(function (slide) {
+        var forceCover = coverPuzzleRunning && slide === primaryMountedSlides[0];
+        if (forceCover || shouldMountSlide(slide, lookAheadPx)) {
           slide.mount();
           slide.requestScrollUpdate();
         } else {
           slide.unmount();
         }
       });
+      var forceLoopCover = coverPuzzleRunning || loopRepositioning;
+      if (forceLoopCover || shouldMountSlide(loopCoverSlide, lookAheadPx)) {
+        loopCoverSlide.mount();
+        loopCoverSlide.requestScrollUpdate();
+      } else {
+        loopCoverSlide.unmount();
+      }
     }
 
-    function currentPrimarySlideIndex() {
-      var readingLine = (global.scrollY || 0) + (global.innerHeight || 0) * 0.55;
-      var currentIndex = 0;
-      primaryMountedSlides.forEach(function (slide, index) {
-        if (slide.section.offsetTop <= readingLine) currentIndex = index;
-      });
-      return currentIndex;
+    function updateVirtualSlideWindow(force) {
+      if (force) {
+        global.cancelAnimationFrame(virtualSlideFrame);
+        virtualSlideFrame = 0;
+        applyVirtualSlideWindow();
+        return;
+      }
+      if (virtualSlideFrame) return;
+      virtualSlideFrame = global.requestAnimationFrame(applyVirtualSlideWindow);
     }
 
-    updateVirtualSlideWindow(0, true);
+    updateVirtualSlideWindow(true);
     var wordSlide = primaryMountedSlides[1];
     var history = [];
     var lastBlinkAt = -Infinity;
@@ -192,6 +208,7 @@
       // Re-arm the cloned cover on every cycle so it always performs the same
       // assembly used by the opening cover, even after many loop passes.
       document.documentElement.classList.remove("cover-intro-complete");
+      loopCoverSlide.mount();
       loopCoverSlide.reset();
       loopCoverSlide.updateScrollMotion();
       playCoverPuzzle(loopCoverSlide, function () {
@@ -206,12 +223,11 @@
         furthestScrollY = 0;
         lastScrollY = 0;
         global.scrollTo(0, 0);
-        updateVirtualSlideWindow(0, true);
-        primaryMountedSlides.forEach(function (slide) { slide.updateScrollMotion(); });
         loopCoverSlide.reset();
         loopCoverSection.classList.add("is-loop-cover-pending");
-        loopCoverSlide.requestScrollUpdate();
         loopRepositioning = false;
+        updateVirtualSlideWindow(true);
+        primaryMountedSlides.forEach(function (slide) { slide.updateScrollMotion(); });
       });
       return true;
     }
@@ -455,7 +471,7 @@
       furthestScrollY = scrollY;
       if (!controlledScrollFrame) controlledScrollTarget = scrollY;
       lastScrollY = scrollY;
-      updateVirtualSlideWindow(currentPrimarySlideIndex());
+      updateVirtualSlideWindow();
     }
 
     function setCameraButtonLabel(label) {
@@ -605,14 +621,21 @@
       noteIdleOmissionActivity(lastScrollInputAt);
     }, { passive: true });
     global.addEventListener("scroll", handleScroll, { passive: true });
-    global.addEventListener("resize", refreshLoopBoundary, { passive: true });
-    global.addEventListener("load", refreshLoopBoundary, { once: true });
+    global.addEventListener("resize", function () {
+      refreshLoopBoundary();
+      updateVirtualSlideWindow(true);
+    }, { passive: true });
+    global.addEventListener("load", function () {
+      refreshLoopBoundary();
+      updateVirtualSlideWindow(true);
+    }, { once: true });
     document.addEventListener("animationstart", handleIdleBlockingMotionStart, true);
     document.addEventListener("transitionrun", handleIdleBlockingMotionStart, true);
     document.addEventListener("visibilitychange", noteIdleOmissionActivity, { passive: true });
     global.addEventListener("beforeunload", function () {
       if (detector) detector.stop();
       global.cancelAnimationFrame(eyeTimerFrame);
+      global.cancelAnimationFrame(virtualSlideFrame);
       global.clearTimeout(idleOmissionPromptTimer);
     });
   }

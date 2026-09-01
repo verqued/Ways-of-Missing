@@ -277,8 +277,16 @@
     return this;
   };
 
+  WordSlide.prototype.isRenderRelevant = function () {
+    if (!this.artboard || !this.artboard.isConnected || !this.section) return false;
+    var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
+    var updateMargin = Math.min(320, Math.max(120, viewportHeight * 0.35));
+    var rect = this.section.getBoundingClientRect();
+    return rect.bottom > -updateMargin && rect.top < viewportHeight + updateMargin;
+  };
+
   WordSlide.prototype.updateScrollMotion = function () {
-    if (!this.artboard || !this.artboard.isConnected) return;
+    if (!this.isRenderRelevant()) return;
     var rect = this.artboard.getBoundingClientRect();
     var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
     var exclusiveFocus = WordSlide.getExclusiveFocus();
@@ -961,7 +969,7 @@
   };
 
   WordSlide.prototype.requestScrollUpdate = function () {
-    if (!this.artboard || !this.artboard.isConnected) return;
+    if (!this.isRenderRelevant()) return;
     if (this.scrollFrame) return;
     this.scrollFrame = global.requestAnimationFrame(function () {
       this.scrollFrame = 0;

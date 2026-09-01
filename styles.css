@@ -304,11 +304,19 @@ main {
    the unshifted shared cover layout. */
 #slide-cover {
   --cover-pink-center-offset: max(6.13vw, 10.897svh);
+  min-height: calc(
+    max(160svh, 90vw)
+    + max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px))
+  );
   padding-top: max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px));
 }
 
 .loop-cover-buffer {
   --cover-pink-center-offset: max(6.13vw, 10.897svh);
+  min-height: calc(
+    max(160svh, 90vw)
+    + max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px))
+  );
   padding-top: max(0px, calc(50svh - var(--cover-pink-center-offset) - 55px));
 }
 
@@ -362,6 +370,7 @@ main {
 
 /* Slides 17–18 intentionally place photographs beyond the Illustrator artboard. */
 #slide-17 {
+  min-height: calc(max(160svh, 90vw) + max(10vw, 18svh));
   padding-bottom: max(10vw, 18svh);
 }
 
@@ -415,9 +424,8 @@ main {
     scale(
       var(--scroll-scale-x, var(--scroll-scale, 1)),
       var(--scroll-scale-y, var(--scroll-scale, 1))
-    );
+  );
   transform-origin: center;
-  will-change: transform, opacity, clip-path, filter;
   pointer-events: none;
   user-select: none;
   transition:
@@ -432,6 +440,7 @@ html.cover-puzzle-lock body {
 }
 
 .word-vector-unit.is-cover-puzzle-piece {
+  will-change: transform, opacity, filter;
   animation: cover-puzzle-assemble 1.08s cubic-bezier(.16,.82,.22,1) var(--puzzle-delay, 0ms) both;
   transition: none !important;
 }
