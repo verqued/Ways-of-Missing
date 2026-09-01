@@ -193,7 +193,10 @@
       image.alt = "";
       image.draggable = false;
       image.decoding = "async";
-      image.loading = "lazy";
+      // Slides are already virtualized by distance. Once one is mounted its
+      // SVG units must start loading immediately; native lazy loading could
+      // otherwise leave holes when a visitor scrolls faster than decoding.
+      image.loading = "eager";
       image.dataset.unitId = unit.id;
       image.dataset.groupIndex = String(unit.groupIndex);
       image.dataset.unitKind = unit.kind;

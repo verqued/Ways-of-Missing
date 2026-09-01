@@ -64,23 +64,25 @@
     );
     var virtualSlideFrame = 0;
 
-    function shouldMountSlide(slide, lookAheadPx) {
+    function shouldMountSlide(slide, lookAheadPx, lookBehindPx) {
       if (!slide || !slide.section) return false;
       var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
       var rect = slide.section.getBoundingClientRect();
-      return rect.bottom > -2 && rect.top < viewportHeight + lookAheadPx;
+      return rect.bottom > -lookBehindPx && rect.top < viewportHeight + lookAheadPx;
     }
 
     function applyVirtualSlideWindow() {
       virtualSlideFrame = 0;
       var viewportHeight = global.innerHeight || document.documentElement.clientHeight;
-      // Keep only one viewport of unloaded content warm. It is close enough to
-      // finish loading before entry, but no longer creates three full future
-      // slides (and their compositor layers) at once.
-      var lookAheadPx = viewportHeight;
+      // Warm two viewports ahead so hundreds of SVG units have enough time to
+      // load and decode on slower exhibition hardware. Retaining only half a
+      // viewport behind also prevents overflow artwork from disappearing at a
+      // section boundary without keeping old slides indefinitely.
+      var lookAheadPx = viewportHeight * 2;
+      var lookBehindPx = viewportHeight * 0.5;
       primaryMountedSlides.forEach(function (slide) {
         var forceCover = coverPuzzleRunning && slide === primaryMountedSlides[0];
-        if (forceCover || shouldMountSlide(slide, lookAheadPx)) {
+        if (forceCover || shouldMountSlide(slide, lookAheadPx, lookBehindPx)) {
           slide.mount();
           slide.requestScrollUpdate();
         } else {
@@ -88,7 +90,7 @@
         }
       });
       var forceLoopCover = coverPuzzleRunning || loopRepositioning;
-      if (forceLoopCover || shouldMountSlide(loopCoverSlide, lookAheadPx)) {
+      if (forceLoopCover || shouldMountSlide(loopCoverSlide, lookAheadPx, lookBehindPx)) {
         loopCoverSlide.mount();
         loopCoverSlide.requestScrollUpdate();
       } else {
