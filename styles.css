@@ -67,6 +67,50 @@ video {
   word-break: keep-all;
 }
 
+.orientation-gate__content {
+  width: 100%;
+}
+
+.orientation-gate__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.orientation-gate__character.is-omitted {
+  visibility: hidden;
+}
+
+.instagram-external-browser,
+.instagram-external-browser__note {
+  display: none;
+}
+
+html.is-instagram-browser .instagram-external-browser {
+  display: inline-block;
+  margin-top: clamp(24px, 7vw, 54px);
+  padding: 0.12em 0.2em 0.14em;
+  background: #000;
+  color: #fff;
+  font-family: Monaco, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(20px, 5.6vw, 34px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.055em;
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.is-instagram-browser .instagram-external-browser__note {
+  display: block;
+  max-width: 34em;
+  margin: 12px 0 0;
+  font-family: Monaco, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(12px, 3.3vw, 17px);
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+}
+
 .camera-gate {
   position: fixed;
   inset: 0;

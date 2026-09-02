@@ -20,11 +20,26 @@
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png" />
+    <script>
+      if (/Instagram|FBAN\/Instagram|FB_IAB/i.test(navigator.userAgent || "")) {
+        document.documentElement.classList.add("is-instagram-browser");
+      }
+    </script>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <aside class="orientation-gate" aria-label="화면 회전 안내">
-      <strong>가로로 돌려주세요.</strong>
+      <div class="orientation-gate__content">
+        <strong id="orientation-message">가로로 돌려주세요.</strong>
+        <a
+          class="instagram-external-browser"
+          id="instagram-external-browser"
+          href="https://verqued.github.io/Ways-of-Missing/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >외부 브라우저에서 열기</a>
+        <p class="instagram-external-browser__note">열리지 않으면 우측 상단 메뉴에서 외부 브라우저로 열어주세요.</p>
+      </div>
     </aside>
 
     <aside class="camera-gate" id="camera-gate" aria-label="가이드라인 및 카메라 허용" hidden>

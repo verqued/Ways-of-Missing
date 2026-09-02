@@ -125,6 +125,9 @@
     var idleOmissionCheckIntervalMs = 200;
 
     var gate = document.querySelector("#camera-gate");
+    var orientationGate = document.querySelector(".orientation-gate");
+    var orientationMessage = document.querySelector("#orientation-message");
+    var instagramExternalBrowser = document.querySelector("#instagram-external-browser");
     var startButton = document.querySelector("#camera-start");
     var mobileGuideDismiss = document.querySelector("#mobile-guide-dismiss");
     var cameraHud = document.querySelector("#camera-hud");
@@ -145,6 +148,91 @@
     var loopRepositioning = false;
     var coverPuzzleRunning = false;
     var coverPuzzleTimer = 0;
+
+    var instagramUserAgent = /Instagram|FBAN\/Instagram|FB_IAB/i.test(global.navigator.userAgent || "");
+    var instagramPreview = /^(localhost|127\.0\.0\.1)$/.test(global.location.hostname)
+      && new URLSearchParams(global.location.search).has("instagram-preview");
+    if (instagramUserAgent || instagramPreview) {
+      document.documentElement.classList.add("is-instagram-browser");
+      if (instagramExternalBrowser) {
+        var externalUrl = new URL(global.location.href);
+        externalUrl.searchParams.delete("instagram-preview");
+        instagramExternalBrowser.href = externalUrl.href;
+        if (/Android/i.test(global.navigator.userAgent || "")) {
+          instagramExternalBrowser.removeAttribute("target");
+          instagramExternalBrowser.href = "intent://" + externalUrl.host
+            + externalUrl.pathname + externalUrl.search + externalUrl.hash
+            + "#Intent;scheme=" + externalUrl.protocol.replace(":", "")
+            + ";action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end";
+        }
+      }
+    }
+
+    var orientationCharacters = [];
+    function prepareOrientationGateCharacters() {
+      if (!orientationGate || !orientationMessage || !primaryMountedSlides[0]) return;
+      var label = orientationMessage.textContent || "가로로 돌려주세요.";
+      orientationMessage.textContent = "";
+      orientationMessage.setAttribute("aria-label", label);
+      label.split(/(\s+)/).forEach(function (part) {
+        if (!part) return;
+        if (/^\s+$/.test(part)) {
+          orientationMessage.appendChild(document.createTextNode(part));
+          return;
+        }
+        var word = document.createElement("span");
+        word.className = "orientation-gate__word";
+        Array.from(part).forEach(function (character) {
+          var unit = document.createElement("span");
+          unit.className = "orientation-gate__character";
+          unit.textContent = character;
+          unit.setAttribute("aria-hidden", "true");
+          unit.dataset.unitKind = "word";
+          unit.dataset.omissionStackable = "true";
+          unit.dataset.omissionWhiteText = "false";
+          word.appendChild(unit);
+          orientationCharacters.push(unit);
+        });
+        orientationMessage.appendChild(word);
+      });
+      var typography = global.getComputedStyle(orientationMessage);
+      orientationCharacters.forEach(function (unit) {
+        unit.style.fontFamily = typography.fontFamily;
+        unit.style.fontSize = typography.fontSize;
+        unit.style.fontWeight = typography.fontWeight;
+        unit.style.lineHeight = typography.lineHeight;
+        unit.style.letterSpacing = typography.letterSpacing;
+        unit.style.color = typography.color;
+      });
+      orientationGate.addEventListener("pointerdown", function (event) {
+        if (event.target.closest(".instagram-external-browser")) return;
+        var available = orientationCharacters.filter(function (unit) {
+          return !unit.classList.contains("is-omitted");
+        });
+        if (!available.length) return;
+        var closest = available.reduce(function (best, unit) {
+          var rect = unit.getBoundingClientRect();
+          var x = rect.left + rect.width / 2;
+          var y = rect.top + rect.height / 2;
+          var distance = Math.hypot(event.clientX - x, event.clientY - y);
+          return !best || distance < best.distance ? { unit: unit, distance: distance } : best;
+        }, null);
+        if (closest) primaryMountedSlides[0].dropOmittedUnit(closest.unit, 0);
+      });
+    }
+
+    function clearOrientationGateDropsWhenHidden() {
+      if (!orientationGate || global.getComputedStyle(orientationGate).display !== "none") return;
+      orientationCharacters.forEach(function (unit) {
+        primaryMountedSlides[0].clearDroppedUnit(unit);
+      });
+    }
+
+    prepareOrientationGateCharacters();
+    global.addEventListener("resize", clearOrientationGateDropsWhenHidden, { passive: true });
+    global.addEventListener("orientationchange", function () {
+      global.setTimeout(clearOrientationGateDropsWhenHidden, 80);
+    }, { passive: true });
 
     function playCoverPuzzle(slide, onComplete) {
       if (!slide || !slide.groups || !slide.groups[0] || coverPuzzleRunning) return false;
