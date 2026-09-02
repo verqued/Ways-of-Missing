@@ -31,14 +31,19 @@
     <aside class="orientation-gate" aria-label="화면 회전 안내">
       <div class="orientation-gate__content">
         <strong id="orientation-message">가로로 돌려주세요.</strong>
-        <a
-          class="instagram-external-browser"
-          id="instagram-external-browser"
-          href="https://verqued.github.io/Ways-of-Missing/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >외부 브라우저에서 열기</a>
-        <p class="instagram-external-browser__note">열리지 않으면 우측 상단 메뉴에서 외부 브라우저로 열어주세요.</p>
+        <p class="orientation-gate__browser-help">화면이 회전되지 않으면 외부 브라우저를 사용해 주세요.</p>
+        <div class="orientation-gate__actions">
+          <a
+            class="instagram-external-browser"
+            id="instagram-external-browser"
+            href="https://verqued.github.io/Ways-of-Missing/"
+            rel="noopener noreferrer"
+          >외부 브라우저에서 열기</a>
+          <button class="instagram-copy-link" id="instagram-copy-link" type="button">주소 복사</button>
+        </div>
+        <p class="instagram-external-browser__note" id="instagram-external-browser-note" aria-live="polite">
+          열리지 않으면 오른쪽 위 메뉴에서 외부 브라우저로 열기를 선택해 주세요.
+        </p>
       </div>
     </aside>
 

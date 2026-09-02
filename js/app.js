@@ -128,6 +128,8 @@
     var orientationGate = document.querySelector(".orientation-gate");
     var orientationMessage = document.querySelector("#orientation-message");
     var instagramExternalBrowser = document.querySelector("#instagram-external-browser");
+    var instagramCopyLink = document.querySelector("#instagram-copy-link");
+    var instagramExternalBrowserNote = document.querySelector("#instagram-external-browser-note");
     var startButton = document.querySelector("#camera-start");
     var mobileGuideDismiss = document.querySelector("#mobile-guide-dismiss");
     var cameraHud = document.querySelector("#camera-hud");
@@ -154,18 +156,73 @@
       && new URLSearchParams(global.location.search).has("instagram-preview");
     if (instagramUserAgent || instagramPreview) {
       document.documentElement.classList.add("is-instagram-browser");
+      var externalUrl = new URL(global.location.href);
+      externalUrl.searchParams.delete("instagram-preview");
+
+      function showExternalBrowserNote(message) {
+        if (instagramExternalBrowserNote) instagramExternalBrowserNote.textContent = message;
+      }
+
+      function copyExternalUrl() {
+        var copied = global.navigator.clipboard && global.isSecureContext
+          ? global.navigator.clipboard.writeText(externalUrl.href).then(function () { return true; })
+          : Promise.resolve(false);
+        return copied.catch(function () { return false; }).then(function (didCopy) {
+          if (didCopy) return true;
+          var field = document.createElement("textarea");
+          field.value = externalUrl.href;
+          field.setAttribute("readonly", "");
+          field.style.position = "fixed";
+          field.style.opacity = "0";
+          document.body.appendChild(field);
+          field.select();
+          var fallbackCopied = false;
+          try {
+            fallbackCopied = document.execCommand("copy");
+          } catch (error) {
+            fallbackCopied = false;
+          }
+          field.remove();
+          return fallbackCopied;
+        }).then(function (didCopy) {
+          showExternalBrowserNote(didCopy
+            ? "주소가 복사됐습니다. Safari나 Chrome 주소창에 붙여넣어 열어 주세요."
+            : "오른쪽 위 메뉴에서 외부 브라우저로 열기를 선택해 주세요.");
+          return didCopy;
+        });
+      }
+
       if (instagramExternalBrowser) {
-        var externalUrl = new URL(global.location.href);
-        externalUrl.searchParams.delete("instagram-preview");
         instagramExternalBrowser.href = externalUrl.href;
         if (/Android/i.test(global.navigator.userAgent || "")) {
-          instagramExternalBrowser.removeAttribute("target");
           instagramExternalBrowser.href = "intent://" + externalUrl.host
-            + externalUrl.pathname + externalUrl.search + externalUrl.hash
-            + "#Intent;scheme=" + externalUrl.protocol.replace(":", "")
-            + ";action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end";
+            + externalUrl.pathname + externalUrl.search
+            + "#Intent;scheme=https;package=com.android.chrome"
+            + ";action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE"
+            + ";S.browser_fallback_url=" + encodeURIComponent(externalUrl.href) + ";end";
+          showExternalBrowserNote("열리지 않으면 오른쪽 위 ⋮ 메뉴에서 외부 브라우저로 열기를 선택하거나 주소를 복사해 주세요.");
+        } else {
+          instagramExternalBrowser.textContent = "공유·열기 메뉴";
+          instagramExternalBrowser.addEventListener("click", function (event) {
+            event.preventDefault();
+            if (!global.navigator.share) {
+              copyExternalUrl();
+              return;
+            }
+            global.navigator.share({
+              title: document.title,
+              url: externalUrl.href
+            }).then(function () {
+              showExternalBrowserNote("공유 메뉴에서 Safari나 Chrome을 선택해 열어 주세요.");
+            }).catch(function (error) {
+              if (error && error.name === "AbortError") return;
+              copyExternalUrl();
+            });
+          });
+          showExternalBrowserNote("버튼을 누른 뒤 공유 메뉴에서 Safari나 Chrome을 선택해 주세요. 없으면 주소를 복사해 열어 주세요.");
         }
       }
+      if (instagramCopyLink) instagramCopyLink.addEventListener("click", copyExternalUrl);
     }
 
     var orientationCharacters = [];
@@ -205,7 +262,7 @@
         unit.style.color = typography.color;
       });
       orientationGate.addEventListener("pointerdown", function (event) {
-        if (event.target.closest(".instagram-external-browser")) return;
+        if (event.target.closest("a, button")) return;
         var available = orientationCharacters.filter(function (unit) {
           return !unit.classList.contains("is-omitted");
         });
