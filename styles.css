@@ -73,6 +73,7 @@ video {
 }
 
 .orientation-gate__browser-help {
+  display: none;
   max-width: 34em;
   margin: clamp(18px, 5vw, 38px) 0 0;
   font-family: inherit;
@@ -81,6 +82,10 @@ video {
   line-height: 1.42;
   letter-spacing: -0.045em;
   word-break: keep-all;
+}
+
+html.is-instagram-browser .orientation-gate__browser-help {
+  display: block;
 }
 
 .orientation-gate__word {
@@ -298,6 +303,11 @@ html.is-instagram-browser .instagram-external-browser__note {
 
 .camera-gate .mobile-guide-dismiss {
   display: none;
+}
+
+html.is-mobile-experience .camera-gate__inner .keyboard-guide-dismiss-copy,
+html.is-mobile-experience .camera-gate .mobile-guide-dismiss {
+  display: none !important;
 }
 
 .camera-hud {

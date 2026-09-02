@@ -151,7 +151,16 @@
     var coverPuzzleRunning = false;
     var coverPuzzleTimer = 0;
 
-    var instagramUserAgent = /Instagram|FBAN\/Instagram|FB_IAB/i.test(global.navigator.userAgent || "");
+    var userAgent = global.navigator.userAgent || "";
+    var mobileExperience = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)
+      || (global.navigator.platform === "MacIntel" && global.navigator.maxTouchPoints > 1)
+      || (global.matchMedia && global.matchMedia("(hover: none) and (pointer: coarse)").matches);
+    if (mobileExperience) {
+      document.documentElement.classList.add("is-mobile-experience");
+      if (mobileGuideDismiss) mobileGuideDismiss.hidden = true;
+    }
+
+    var instagramUserAgent = /Instagram|FBAN\/Instagram|FB_IAB/i.test(userAgent);
     var instagramPreview = /^(localhost|127\.0\.0\.1)$/.test(global.location.hostname)
       && new URLSearchParams(global.location.search).has("instagram-preview");
     if (instagramUserAgent || instagramPreview) {
@@ -267,14 +276,8 @@
           return !unit.classList.contains("is-omitted");
         });
         if (!available.length) return;
-        var closest = available.reduce(function (best, unit) {
-          var rect = unit.getBoundingClientRect();
-          var x = rect.left + rect.width / 2;
-          var y = rect.top + rect.height / 2;
-          var distance = Math.hypot(event.clientX - x, event.clientY - y);
-          return !best || distance < best.distance ? { unit: unit, distance: distance } : best;
-        }, null);
-        if (closest) primaryMountedSlides[0].dropOmittedUnit(closest.unit, 0);
+        var randomUnit = available[Math.floor(Math.random() * available.length)];
+        primaryMountedSlides[0].dropOmittedUnit(randomUnit, 0);
       });
     }
 
@@ -652,9 +655,13 @@
         if (!eyeTimerFrame) eyeTimerFrame = global.requestAnimationFrame(animateEyeOpenMeter);
         setCameraButtonLabel("카메라 허용됨.");
         gate.classList.remove("is-camera-loading");
-        gate.classList.add("is-camera-allowed");
         cameraPermissionGranted = true;
         noteIdleOmissionActivity(global.performance.now());
+        if (mobileExperience) {
+          dismissPresentationGuideline();
+        } else {
+          gate.classList.add("is-camera-allowed");
+        }
       } catch (error) {
         requestDetector.stop();
         if (requestSequence !== cameraRequestSequence) return;
